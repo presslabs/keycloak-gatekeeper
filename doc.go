@@ -39,12 +39,13 @@ const (
 	email       = "gambol99@gmail.com"
 	description = "is a proxy using the keycloak service for auth and authorization"
 
-	authorizationHeader = "Authorization"
-	contextScopeName    = "context.scope.name"
-	envPrefix           = "PROXY_"
-	headerUpgrade       = "Upgrade"
-	httpSchema          = "http"
-	versionHeader       = "X-Auth-Proxy-Version"
+	authorizationHeader  = "Authorization"
+	authenticationHeader = "WWW-Authenticate"
+	contextScopeName     = "context.scope.name"
+	envPrefix            = "PROXY_"
+	headerUpgrade        = "Upgrade"
+	httpSchema           = "http"
+	versionHeader        = "X-Auth-Proxy-Version"
 
 	authorizationURL = "/authorize"
 	callbackURL      = "/callback"
@@ -130,6 +131,8 @@ type Resource struct {
 	Methods []string `json:"methods" yaml:"methods"`
 	// WhiteListed permits the prefix through
 	WhiteListed bool `json:"white-listed" yaml:"white-listed"`
+	// BasicAuth specifies if basic auth should be offered or not
+	BasicAuth bool `json:"basic-auth" yaml:"basic-auth"`
 	// RequireAnyRole indicates that ANY of the roles are required, the default is all
 	RequireAnyRole bool `json:"require-any-role" yaml:"require-any-role"`
 	// Roles the roles required to access this url
@@ -235,6 +238,8 @@ type Config struct {
 	// LocalhostMetrics indicated the metrics can only be consume via localhost
 	LocalhostMetrics bool `json:"localhost-metrics" yaml:"localhost-metrics" usage:"enforces the metrics page can only been requested from 127.0.0.1"`
 
+	// BasicAuthRealm is the realm used for basic auth
+	BasicAuthRealm string `json:"basic-auth-realm" yaml:"basic-auth-realm" usage:"specify the realm for basic authentication" env:"BASIC_AUTH_REALM"`
 	// AccessTokenDuration is default duration applied to the access token cookie
 	AccessTokenDuration time.Duration `json:"access-token-duration" yaml:"access-token-duration" usage:"fallback cookie duration for the access token when using refresh tokens"`
 	// CookieDomain is a list of domains the cookie is available to

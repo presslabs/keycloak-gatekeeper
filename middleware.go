@@ -25,6 +25,7 @@ import (
 
 	"github.com/PuerkitoBio/purell"
 	"github.com/coreos/go-oidc/jose"
+	"github.com/coreos/go-oidc/oauth2"
 	"github.com/go-chi/chi/middleware"
 	uuid "github.com/satori/go.uuid"
 	"github.com/unrolled/secure"
@@ -95,6 +96,54 @@ func (r *oauthProxy) loggingMiddleware(next http.Handler) http.Handler {
 			zap.String("method", req.Method),
 			zap.String("path", req.URL.Path))
 	})
+}
+
+func (r *oauthProxy) basicAuthMiddleware(resource *Resource) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			if !resource.BasicAuth {
+				r.log.Debug("the resource is not using basic auth, move to next middleware")
+				next.ServeHTTP(w, req.WithContext(req.Context()))
+				return
+			}
+
+			username, password, ok := req.BasicAuth()
+			if !ok {
+				r.log.Info("the request does not contain valid basic auth")
+				w.Header().Add(authenticationHeader, fmt.Sprintf("Basic realm=\"%s\"", r.config.BasicAuthRealm))
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+
+			client, err := r.client.OAuthClient()
+			if err != nil {
+				r.log.Error("couldn't obtain an OAuth client", zap.Error(err))
+				next.ServeHTTP(w, req.WithContext(r.redirectToAuthorization(w, req)))
+				return
+			}
+
+			r.log.Info("attempting to obtain token from user password")
+			token, err := client.UserCredsToken(username, password)
+			r.log.Info("obtained token",
+				zap.String("access_token", token.AccessToken),
+				zap.String("refresh_token", token.RefreshToken),
+				zap.String("token_type", token.TokenType))
+			if err != nil {
+				if strings.HasPrefix(err.Error(), oauth2.ErrorInvalidGrant) {
+					w.WriteHeader(http.StatusUnauthorized)
+					r.log.Error("invalid user credentials provided", zap.Error(err))
+					return
+				}
+				w.WriteHeader(http.StatusInternalServerError)
+				r.log.Error("unable to request the access token via grant_type 'password'", zap.Error(err))
+				return
+			}
+
+			req.Header.Set(authorizationHeader, fmt.Sprintf("Token %s", token.IDToken))
+
+			next.ServeHTTP(w, req.WithContext(req.Context()))
+		})
+	}
 }
 
 // authenticationMiddleware is responsible for verifying the access token
@@ -418,6 +467,7 @@ func (r *oauthProxy) securityMiddleware(next http.Handler) http.Handler {
 		FrameDeny:             r.config.EnableFrameDeny,
 		SSLProxyHeaders:       map[string]string{"X-Forwarded-Proto": "https"},
 		SSLRedirect:           r.config.EnableHTTPSRedirect,
+		BasicAuthRealm:        r.config.BasicAuthRealm,
 	})
 
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
