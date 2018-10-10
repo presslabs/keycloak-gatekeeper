@@ -130,6 +130,8 @@ type Resource struct {
 	Methods []string `json:"methods" yaml:"methods"`
 	// WhiteListed permits the prefix through
 	WhiteListed bool `json:"white-listed" yaml:"white-listed"`
+	// OptionalAuth makes authentication optional
+	OptionalAuth bool `json:optional-auth" yaml:"optional-auth"`
 	// RequireAnyRole indicates that ANY of the roles are required, the default is all
 	RequireAnyRole bool `json:"require-any-role" yaml:"require-any-role"`
 	// Roles the roles required to access this url
