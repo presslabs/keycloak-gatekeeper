@@ -105,6 +105,10 @@ func (r *oauthProxy) authenticationMiddleware(resource *Resource) func(http.Hand
 			// grab the user identity from the request
 			user, err := r.getIdentity(req)
 			if err != nil {
+				if resource.OptionalAuth {
+					r.log.Debug("no session found in request, escaping middleware chain")
+					return
+				}
 				r.log.Error("no session found in request, redirecting for authorization", zap.Error(err))
 				next.ServeHTTP(w, req.WithContext(r.redirectToAuthorization(w, req)))
 				return

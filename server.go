@@ -248,6 +248,9 @@ func (r *oauthProxy) createReverseProxy() error {
 				enableDefaultDeny = false
 			}
 		}
+		if x.WhiteListed && x.OptionalAuth {
+			return fmt.Errorf("you've requested optional authentication for an already whitelisted resource %s", x.URL)
+		}
 	}
 
 	if enableDefaultDeny {
