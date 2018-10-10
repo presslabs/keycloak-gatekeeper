@@ -68,11 +68,17 @@ func (r *Resource) parse(resource string) (*Resource, error) {
 			}
 			r.WhiteListed = value
 		case "basic-auth":
-			value, err := strconv.ParseBool(kp[1])
-			if err != nil {
-				return nil, errors.New("the value of basic-auth must be true|TRUE|T or it's false equivalent")
+			switch kp[1] {
+			case
+				"required",
+				"preferred",
+				"allowed",
+				"disabled":
+				r.BasicAuth = kp[1]
+			default:
+				return nil, errors.New("the value of basic-auth must be one of required|preferred|accepted|disabled")
 			}
-			r.BasicAuth = value
+
 		default:
 			return nil, errors.New("invalid identifier, should be roles, uri or methods")
 		}
@@ -132,8 +138,8 @@ func (r Resource) String() string {
 		methods = strings.Join(r.Methods, ",")
 	}
 
-	if r.BasicAuth {
-		return fmt.Sprintf("uri: %s, basic-auth, methods: %s, required: %s", r.URL, methods, roles)
+	if r.BasicAuth != "disabled" {
+		return fmt.Sprintf("uri: %s, basic-auth: %s, methods: %s, required: %s", r.URL, r.BasicAuth, methods, roles)
 	}
 
 	return fmt.Sprintf("uri: %s, methods: %s, required: %s", r.URL, methods, roles)

@@ -101,14 +101,31 @@ func (r *oauthProxy) loggingMiddleware(next http.Handler) http.Handler {
 func (r *oauthProxy) basicAuthMiddleware(resource *Resource) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			if !resource.BasicAuth {
+			if resource.BasicAuth == "disabled" {
 				r.log.Debug("the resource is not using basic auth, move to next middleware")
 				next.ServeHTTP(w, req.WithContext(req.Context()))
 				return
 			}
 
 			username, password, ok := req.BasicAuth()
+			// the request doesn't contain proper basic auth credentials
 			if !ok {
+				// see if the request contains user identity
+				_, identityError := r.getIdentity(req)
+
+				action := "move-to-next-middleware"
+
+				// if basic auth is required or is preferred and user identity is not known
+				if (resource.BasicAuth == "required") || (resource.BasicAuth == "preferred" && identityError != nil) {
+					action = "require-basic-auth"
+				}
+
+				if action == "move-to-next-middleware" {
+					next.ServeHTTP(w, req.WithContext(req.Context()))
+					return
+				}
+
+				// return basic auth header
 				r.log.Info("the request does not contain valid basic auth")
 				w.Header().Add(authenticationHeader, fmt.Sprintf("Basic realm=\"%s\"", r.config.BasicAuthRealm))
 				w.WriteHeader(http.StatusUnauthorized)

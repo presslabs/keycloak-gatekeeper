@@ -132,7 +132,7 @@ type Resource struct {
 	// WhiteListed permits the prefix through
 	WhiteListed bool `json:"white-listed" yaml:"white-listed"`
 	// BasicAuth specifies if basic auth should be offered or not
-	BasicAuth bool `json:"basic-auth" yaml:"basic-auth"`
+	BasicAuth string `json:"basic-auth" yaml:"basic-auth"`
 	// RequireAnyRole indicates that ANY of the roles are required, the default is all
 	RequireAnyRole bool `json:"require-any-role" yaml:"require-any-role"`
 	// Roles the roles required to access this url

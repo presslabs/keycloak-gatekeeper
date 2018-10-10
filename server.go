@@ -248,8 +248,8 @@ func (r *oauthProxy) createReverseProxy() error {
 				enableDefaultDeny = false
 			}
 		}
-		if x.WhiteListed && x.BasicAuth {
-			return fmt.Errorf("you've asked for basic auth but also whitelisted resource %s", x.URL)
+		if x.WhiteListed && (x.BasicAuth == "required" || x.BasicAuth == "preferred") {
+			return fmt.Errorf("you've %s basic auth but also whitelisted resource %s", x.BasicAuth, x.URL)
 		}
 	}
 
