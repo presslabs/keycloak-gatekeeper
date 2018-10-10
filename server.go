@@ -248,6 +248,9 @@ func (r *oauthProxy) createReverseProxy() error {
 				enableDefaultDeny = false
 			}
 		}
+		if x.WhiteListed && (x.BasicAuth == "required" || x.BasicAuth == "preferred") {
+			return fmt.Errorf("you've %s basic auth but also whitelisted resource %s", x.BasicAuth, x.URL)
+		}
 	}
 
 	if enableDefaultDeny {
@@ -258,6 +261,7 @@ func (r *oauthProxy) createReverseProxy() error {
 	for _, x := range r.config.Resources {
 		r.log.Info("protecting resource", zap.String("resource", x.String()))
 		e := engine.With(
+			r.basicAuthMiddleware(x),
 			r.authenticationMiddleware(x),
 			r.admissionMiddleware(x),
 			r.identityHeadersMiddleware(r.config.AddClaims))
